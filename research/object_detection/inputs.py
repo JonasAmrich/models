@@ -53,7 +53,8 @@ def transform_input_data(tensor_dict,
                          data_augmentation_fn=None,
                          merge_multiple_boxes=False,
                          retain_original_image=False,
-                         use_bfloat16=False):
+                         use_bfloat16=False,
+                         class_range=(0, 99999999)):
   """A single function that is responsible for all input data transformations.
 
   Data transformation functions are applied in the following order.
@@ -94,6 +95,7 @@ def transform_input_data(tensor_dict,
     after applying all the transformations.
   """
   if fields.InputDataFields.groundtruth_boxes in tensor_dict:
+    tensor_dict = util_ops.retain_groundtruth_with_classes_in_range(tensor_dict, class_range)
     tensor_dict = util_ops.filter_groundtruth_with_nan_box_coordinates(
         tensor_dict)
   if fields.InputDataFields.image_additional_channels in tensor_dict:
@@ -130,7 +132,7 @@ def transform_input_data(tensor_dict,
                 groundtruth_instance_masks] = resized_masks
 
   # Transform groundtruth classes to one hot encodings.
-  label_offset = 1
+  label_offset = 1 + class_range[0]
   zero_indexed_groundtruth_classes = tensor_dict[
       fields.InputDataFields.groundtruth_classes] - label_offset
   tensor_dict[fields.InputDataFields.groundtruth_classes] = tf.one_hot(
@@ -472,7 +474,8 @@ def create_train_input_fn(train_config, train_input_config,
           data_augmentation_fn=data_augmentation_fn,
           merge_multiple_boxes=train_config.merge_multiple_label_boxes,
           retain_original_image=train_config.retain_original_images,
-          use_bfloat16=train_config.use_bfloat16)
+          use_bfloat16=train_config.use_bfloat16,
+          class_range=(model_config.class_range_start, model_config.class_range_end))
 
       tensor_dict = pad_input_data_to_static_shapes(
           tensor_dict=transform_data_fn(tensor_dict),

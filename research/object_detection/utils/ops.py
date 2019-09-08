@@ -405,6 +405,35 @@ def retain_groundtruth_with_positive_classes(tensor_dict):
       tensor_dict[fields.InputDataFields.groundtruth_classes], 0))
   return retain_groundtruth(tensor_dict, keep_indices)
 
+def retain_groundtruth_with_classes_in_range(tensor_dict, class_range):
+  """Retains only groundtruth with class within given range.
+
+  Args:
+    tensor_dict: a dictionary of following groundtruth tensors -
+      fields.InputDataFields.groundtruth_boxes
+      fields.InputDataFields.groundtruth_classes
+      fields.InputDataFields.groundtruth_keypoints
+      fields.InputDataFields.groundtruth_instance_masks
+      fields.InputDataFields.groundtruth_is_crowd
+      fields.InputDataFields.groundtruth_area
+      fields.InputDataFields.groundtruth_label_types
+      fields.InputDataFields.groundtruth_difficult
+
+  Returns:
+    a dictionary of tensors containing only the groundtruth with positive
+    classes.
+
+  Raises:
+    ValueError: If groundtruth_classes tensor is not in tensor_dict.
+  """
+  if fields.InputDataFields.groundtruth_classes not in tensor_dict:
+    raise ValueError('`groundtruth classes` not in tensor_dict.')
+  keep_indices = tf.where(tf.logical_and(
+    tf.greater_equal(tensor_dict[fields.InputDataFields.groundtruth_classes], class_range[0]),
+    tf.less(tensor_dict[fields.InputDataFields.groundtruth_classes], class_range[1])
+    ))
+  return retain_groundtruth(tensor_dict, keep_indices)
+
 
 def replace_nan_groundtruth_label_scores_with_ones(label_scores):
   """Replaces nan label scores with 1.0.

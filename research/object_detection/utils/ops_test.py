@@ -445,7 +445,7 @@ class GroundtruthFilterTest(tf.test.TestCase):
         fields.InputDataFields.groundtruth_difficult:
         [True],
         fields.InputDataFields.groundtruth_label_types:
-        ['APPROPRIATE']
+        [b'APPROPRIATE']
     }
     with self.test_session() as sess:
       output_tensors = sess.run(output_tensors, feed_dict=feed_dict)
@@ -634,7 +634,75 @@ class RetainGroundTruthWithPositiveClasses(tf.test.TestCase):
         fields.InputDataFields.groundtruth_difficult:
         [True],
         fields.InputDataFields.groundtruth_label_types:
-        ['APPROPRIATE']
+        [b'APPROPRIATE']
+    }
+    with self.test_session() as sess:
+      output_tensors = sess.run(output_tensors, feed_dict=feed_dict)
+      for key in [fields.InputDataFields.image,
+                  fields.InputDataFields.groundtruth_boxes,
+                  fields.InputDataFields.groundtruth_area]:
+        self.assertAllClose(expected_tensors[key], output_tensors[key])
+      for key in [fields.InputDataFields.groundtruth_classes,
+                  fields.InputDataFields.groundtruth_is_crowd,
+                  fields.InputDataFields.groundtruth_label_types]:
+        self.assertAllEqual(expected_tensors[key], output_tensors[key])
+
+
+class RetainGroundTruthWithClassesInRange(tf.test.TestCase):
+
+  def test_filter_groundtruth_with_classes_in_range(self):
+    input_image = tf.placeholder(tf.float32, shape=(None, None, 3))
+    input_boxes = tf.placeholder(tf.float32, shape=(None, 4))
+    input_classes = tf.placeholder(tf.int32, shape=(None,))
+    input_is_crowd = tf.placeholder(tf.bool, shape=(None,))
+    input_area = tf.placeholder(tf.float32, shape=(None,))
+    input_difficult = tf.placeholder(tf.float32, shape=(None,))
+    input_label_types = tf.placeholder(tf.string, shape=(None,))
+    valid_indices = tf.placeholder(tf.int32, shape=(None,))
+    input_tensors = {
+        fields.InputDataFields.image: input_image,
+        fields.InputDataFields.groundtruth_boxes: input_boxes,
+        fields.InputDataFields.groundtruth_classes: input_classes,
+        fields.InputDataFields.groundtruth_is_crowd: input_is_crowd,
+        fields.InputDataFields.groundtruth_area: input_area,
+        fields.InputDataFields.groundtruth_difficult: input_difficult,
+        fields.InputDataFields.groundtruth_label_types: input_label_types
+    }
+    output_tensors = ops.retain_groundtruth_with_classes_in_range(input_tensors, (10, 20))
+
+    image_tensor = np.random.rand(224, 224, 3)
+    feed_dict = {
+        input_image: image_tensor,
+        input_boxes:
+        np.array([[0.2, 0.4, 0.1, 0.8], [0.2, 0.4, 1.0, 0.8]], dtype=np.float),
+        input_classes:
+        np.array([10, 0], dtype=np.int32),
+        input_is_crowd:
+        np.array([False, True], dtype=np.bool),
+        input_area:
+        np.array([32, 48], dtype=np.float32),
+        input_difficult:
+        np.array([True, False], dtype=np.bool),
+        input_label_types:
+        np.array(['APPROPRIATE', 'INCORRECT'], dtype=np.string_),
+        valid_indices:
+        np.array([0], dtype=np.int32)
+    }
+    expected_tensors = {
+        fields.InputDataFields.image:
+        image_tensor,
+        fields.InputDataFields.groundtruth_boxes:
+        [[0.2, 0.4, 0.1, 0.8]],
+        fields.InputDataFields.groundtruth_classes:
+        [10],
+        fields.InputDataFields.groundtruth_is_crowd:
+        [False],
+        fields.InputDataFields.groundtruth_area:
+        [32],
+        fields.InputDataFields.groundtruth_difficult:
+        [True],
+        fields.InputDataFields.groundtruth_label_types:
+        [b'APPROPRIATE']
     }
     with self.test_session() as sess:
       output_tensors = sess.run(output_tensors, feed_dict=feed_dict)
