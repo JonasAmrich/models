@@ -53,6 +53,7 @@ tf.flags.DEFINE_string('input_images_directory', None,
                        'downloaded from the OpenImages GitHub repository.')
 tf.flags.DEFINE_string('input_image_label_annotations_csv', None,
                        'Path to CSV containing image-level labels annotations')
+tf.flags.DEFINE_boolean('include_annotations_without_images', False, 'Include annotations without images')
 tf.flags.DEFINE_string('input_label_map', None, 'Path to the label map proto')
 tf.flags.DEFINE_string(
     'output_tf_record_path_prefix', None,
@@ -88,6 +89,9 @@ def main(_):
   all_image_ids = pd.DataFrame({'ImageID': all_image_ids})
   all_annotations = pd.concat(
       [all_box_annotations, all_image_ids, all_label_annotations])
+
+  if not FLAGS.include_annotations_without_images:
+    all_annotations = all_annotations.merge(all_image_ids)
 
   tf.logging.log(tf.logging.INFO, 'Found %d images...', len(all_image_ids))
 
