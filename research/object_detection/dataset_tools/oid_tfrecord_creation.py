@@ -47,6 +47,9 @@ def tf_example_from_annotations_data_frame(annotations_data_frame, label_map,
       filtered_data_frame.YMin.isnull()]
   image_id = annotations_data_frame.ImageID.iloc[0]
 
+  if len(filtered_data_frame_boxes) == 0:
+      return None
+
   feature_map = {
       standard_fields.TfExampleFields.object_bbox_ymin:
           dataset_util.float_list_feature(
